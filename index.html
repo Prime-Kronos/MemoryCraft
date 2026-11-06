@@ -777,9 +777,9 @@ const GUIDE_TEXT = {
     cards:[
       ['👀','1. СМОТРИ','На поле появятся подсвеченные блоки. Внимательно запомни их порядок.'],
       ['👆','2. ПОВТОРЯЙ','Когда показ закончится, нажимай на те же блоки строго в том же порядке.'],
-      ['🏆','3. ПРОХОДИ РАУНДЫ','За правильные нажатия получаешь очки и +0,3 секунды. Пройди все 20 раундов!']
+      ['🏆','3. ПРОХОДИ РАУНДЫ','За правильные нажатия получаешь очки и +0,3 секунды. Пройди все 35 уровней!']
     ],
-    tip:'Важно: поле становится больше, а последовательность — длиннее. Ошибка или окончание времени завершает игру.',
+    tip:'Важно: поле становится больше, а последовательность — длиннее, максимум 10 блоков. Ошибка или окончание времени завершает игру.',
     close:'✕ ПОНЯТНО, НАЧАТЬ'
   },
   uz: {
@@ -787,9 +787,9 @@ const GUIDE_TEXT = {
     cards:[
       ['👀','1. KUZATING','Maydonda bloklar ketma-ket yoritiladi. Ularning tartibini diqqat bilan eslab qoling.'],
       ['👆','2. TAKRORLANG','Ko‘rsatish tugagach, bloklarni aynan shu tartibda bosing.'],
-      ['🏆','3. RAUNDLARDAN O‘TING','To‘g‘ri bosishlar uchun ochko va +0,3 soniya olasiz. Barcha 20 raundni yakunlang!']
+      ['🏆','3. RAUNDLARDAN O‘TING','To‘g‘ri bosishlar uchun ochko va +0,3 soniya olasiz. Barcha 35 bosqichni yakunlang!']
     ],
-    tip:'Muhim: maydon kattalashadi, ketma-ketlik esa uzayadi. Xato yoki vaqt tugashi o‘yinni yakunlaydi.',
+    tip:'Muhim: maydon kattalashadi, ketma-ketlik esa 10 tagacha uzayadi. Xato yoki vaqt tugashi o‘yinni yakunlaydi.',
     close:'✕ TUSHUNDIM, BOSHLASH'
   },
   en: {
@@ -797,9 +797,9 @@ const GUIDE_TEXT = {
     cards:[
       ['👀','1. WATCH','Blocks will light up on the board. Memorize their exact order.'],
       ['👆','2. REPEAT','When the sequence ends, tap the same blocks in exactly the same order.'],
-      ['🏆','3. CLEAR THE ROUNDS','Correct taps earn points and +0.3 seconds. Complete all 20 rounds!']
+      ['🏆','3. CLEAR THE ROUNDS','Correct taps earn points and +0.3 seconds. Complete all 35 levels!']
     ],
-    tip:'Important: the board gets larger and the sequence gets longer. A wrong tap or running out of time ends the game.',
+    tip:'Important: the board gets larger and the sequence gets longer (up to 10 blocks). A wrong tap or running out of time ends the game.',
     close:'✕ GOT IT, LET’S PLAY'
   }
 };
@@ -1160,7 +1160,7 @@ function onBlockPress(e) {
       $msg.textContent = `✓ Правильно! +${pts} очков`;
       spawnParticles(cell, '#44FF44');
 
-      if (state.round >= 20) {
+      if (state.round >= 35) {
         const completedToken = state.roundToken;
         setTimeout(() => {
           if (completedToken === state.roundToken && state.phase === 'idle') handleWin();
@@ -1292,7 +1292,7 @@ function handleWin() {
   setTimeout(() => {
     showOverlay(
       '🏆 ПОБЕДА!',
-      `Все 20 раундов пройдены!<br>
+      `Все 35 уровней пройдены!<br>
        Счёт: <span style="color:#FFD700">${state.score}</span><br>
        Режим: <span style="color:#FF6600">${state.extremeMode ? '🔥 EXTREME' : 'NORMAL'}</span><br>
        <span style="color:#4DD9AC;font-size:8px">ELVARQ Company Production</span>`,
@@ -1351,5 +1351,6 @@ document.addEventListener('visibilitychange', () => {
 });
 bootAuth().finally(showHowToPlay);
 </script>
+<script src="game-v3.js"></script>
 </body>
 </html>

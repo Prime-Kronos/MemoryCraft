@@ -315,6 +315,21 @@
   .mode-choice{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px}
   .menu-btn:disabled{opacity:.5}
 
+  .overlay-box{max-height:88vh;overflow-y:auto;overscroll-behavior:contain}
+  .guide-wrap{display:grid;gap:12px;text-align:left;font-family:Arial,sans-serif}
+  .guide-languages{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+  .guide-lang{padding:11px 6px;border:1px solid #45456d;border-radius:8px;background:#111122;color:#bfc3df;font:800 12px Arial,sans-serif}
+  .guide-lang.active{background:#173e32;border-color:#4dd9ac;color:#fff;box-shadow:0 0 12px #4dd9ac33}
+  .guide-cards{display:grid;grid-template-columns:1fr;gap:9px}
+  .guide-card{display:grid;grid-template-columns:42px 1fr;gap:10px;align-items:start;padding:12px;background:linear-gradient(145deg,#17172b,#10101e);border:1px solid #353554;border-left:3px solid #4dd9ac;border-radius:9px}
+  .guide-icon{width:38px;height:38px;display:grid;place-items:center;border-radius:8px;background:#24243d;font-size:21px}
+  .guide-card h3{font:800 13px Arial,sans-serif;color:#ffe08a;margin:1px 0 5px}
+  .guide-card p{font:13px/1.45 Arial,sans-serif;color:#d1d2e5;margin:0}
+  .guide-tip{padding:10px 12px;border:1px dashed #8b7131;border-radius:8px;color:#e8d89d;background:#3b301733;font:12px/1.45 Arial,sans-serif}
+  .guide-close{width:100%;padding:13px;border:1px solid #8b3434;border-radius:8px;background:linear-gradient(135deg,#5b2424,#351818);color:#fff;font:900 13px Arial,sans-serif;letter-spacing:.5px}
+  .guide-open{border-color:#8b7131!important;color:#ffe08a!important}
+  @media(max-height:650px){.overlay-box{max-height:94vh;padding:18px 16px}.guide-card{padding:9px}.guide-card p{font-size:12px}}
+
 </style>
 </head>
 <body>
@@ -749,16 +764,84 @@ function menu(title, subtitle, html) {
   home.style.display = 'grid'; home.innerHTML = html;
   $overlay.classList.remove('hidden');
 }
+let guideLanguage = 'ru';
+try { guideLanguage = localStorage.getItem('mc-guide-language') || 'ru'; } catch (_) {}
+
+const GUIDE_TEXT = {
+  ru: {
+    title:'КАК ИГРАТЬ?', subtitle:'Три простых шага — и ты готов!',
+    cards:[
+      ['👀','1. СМОТРИ','На поле появятся подсвеченные блоки. Внимательно запомни их порядок.'],
+      ['👆','2. ПОВТОРЯЙ','Когда показ закончится, нажимай на те же блоки строго в том же порядке.'],
+      ['🏆','3. ПРОХОДИ РАУНДЫ','За правильные нажатия получаешь очки и +0,3 секунды. Пройди все 20 раундов!']
+    ],
+    tip:'Важно: поле становится больше, а последовательность — длиннее. Ошибка или окончание времени завершает игру.',
+    close:'✕ ПОНЯТНО, НАЧАТЬ'
+  },
+  uz: {
+    title:'QANDAY O‘YNALADI?', subtitle:'Uchta oddiy qadam — va o‘ynashga tayyorsiz!',
+    cards:[
+      ['👀','1. KUZATING','Maydonda bloklar ketma-ket yoritiladi. Ularning tartibini diqqat bilan eslab qoling.'],
+      ['👆','2. TAKRORLANG','Ko‘rsatish tugagach, bloklarni aynan shu tartibda bosing.'],
+      ['🏆','3. RAUNDLARDAN O‘TING','To‘g‘ri bosishlar uchun ochko va +0,3 soniya olasiz. Barcha 20 raundni yakunlang!']
+    ],
+    tip:'Muhim: maydon kattalashadi, ketma-ketlik esa uzayadi. Xato yoki vaqt tugashi o‘yinni yakunlaydi.',
+    close:'✕ TUSHUNDIM, BOSHLASH'
+  },
+  en: {
+    title:'HOW TO PLAY?', subtitle:'Three simple steps — then you are ready!',
+    cards:[
+      ['👀','1. WATCH','Blocks will light up on the board. Memorize their exact order.'],
+      ['👆','2. REPEAT','When the sequence ends, tap the same blocks in exactly the same order.'],
+      ['🏆','3. CLEAR THE ROUNDS','Correct taps earn points and +0.3 seconds. Complete all 20 rounds!']
+    ],
+    tip:'Important: the board gets larger and the sequence gets longer. A wrong tap or running out of time ends the game.',
+    close:'✕ GOT IT, LET’S PLAY'
+  }
+};
+
+function showHowToPlay() {
+  const t = GUIDE_TEXT[guideLanguage] || GUIDE_TEXT.ru;
+  document.getElementById('overlayTitle').textContent = '⛏ ELVARQ MEMORYCRAFT';
+  document.getElementById('overlayScore').textContent = t.subtitle;
+  const home = document.getElementById('homeMenu');
+  home.style.display = 'grid';
+  home.innerHTML = `
+    <div class="guide-wrap">
+      <div class="guide-languages" role="group" aria-label="Language">
+        <button type="button" class="guide-lang ${guideLanguage==='ru'?'active':''}" data-guide-lang="ru">🇷🇺 RU</button>
+        <button type="button" class="guide-lang ${guideLanguage==='uz'?'active':''}" data-guide-lang="uz">🇺🇿 UZB</button>
+        <button type="button" class="guide-lang ${guideLanguage==='en'?'active':''}" data-guide-lang="en">🇬🇧 ENG</button>
+      </div>
+      <div class="guide-cards">
+        ${t.cards.map(c=>`<article class="guide-card"><div class="guide-icon">${c[0]}</div><div><h3>${c[1]}</h3><p>${c[2]}</p></div></article>`).join('')}
+      </div>
+      <div class="guide-tip">💡 ${t.tip}</div>
+      <button type="button" class="guide-close" id="closeGuide">${t.close}</button>
+    </div>`;
+  home.querySelectorAll('[data-guide-lang]').forEach(button => {
+    button.addEventListener('click', () => {
+      guideLanguage = button.dataset.guideLang;
+      try { localStorage.setItem('mc-guide-language', guideLanguage); } catch (_) {}
+      showHowToPlay();
+    });
+  });
+  document.getElementById('closeGuide').onclick = homeMenu;
+  $overlay.classList.remove('hidden');
+}
+
 function homeMenu() {
   elvarqMode='global'; elvarqRoom=null;
   menu('⛏ ELVARQ MEMORYCRAFT','Запоминай блоки. Стань легендой.',`
     <button class="menu-btn primary" id="globalMode">🌍 GLOBAL · EXTREME</button>
     <button class="menu-btn" id="friendsMode">👥 FRIENDS</button>
     <button class="menu-btn gold" id="leaderboardMode">🏆 GLOBAL TOP 100</button>
+    <button class="menu-btn guide-open" id="howToPlay">📖 HOW TO PLAY</button>
     <div class="small-note">Официальная соревновательная игра ELVARQ</div>`);
   document.getElementById('globalMode').onclick=()=>{elvarqMode='global';elvarqDifficulty='extreme';hideOverlay();startGame(true);};
   document.getElementById('friendsMode').onclick=friendsMenu;
   document.getElementById('leaderboardMode').onclick=showGlobalLeaderboard;
+  document.getElementById('howToPlay').onclick=showHowToPlay;
 }
 function friendsMenu() {
   menu('👥 FRIENDS','Играй вместе с друзьями',`
@@ -811,13 +894,25 @@ function roomLobby(room) {
   document.getElementById('backFriends').onclick=friendsMenu;
 }
 async function showGlobalLeaderboard() {
-  menu('🏆 GLOBAL TOP 100','Лучшие игроки ELVARQ',`<div class="leader-list">Загрузка рейтинга...</div><button class="menu-btn" id="backHome">← НАЗАД</button>`);
+  menu('🏆 GLOBAL TOP 100','Лучшие игроки ELVARQ',`<div class="leader-list" aria-live="polite">Загрузка рейтинга...</div><button class="menu-btn" id="backHome">← НАЗАД</button>`);
   document.getElementById('backHome').onclick=homeMenu;
+  const list=document.querySelector('.leader-list');
   try {
     const data=await api('/api/leaderboard?limit=100');
-    const list=document.querySelector('.leader-list');
-    list.innerHTML=data.items.length?data.items.map((p,i)=>`<div class="leader-row"><span>${i+1}. ${escapeHtml(p.name)}</span><strong>${p.score}</strong></div>`).join(''):'<div class="small-note">Пока нет результатов. Стань первым!</div>';
-  } catch(e) { document.querySelector('.leader-list').textContent='Рейтинг загрузится после подключения сервера.'; }
+    if (!list || !list.isConnected) return;
+    const items=Array.isArray(data) ? data : (Array.isArray(data?.items) ? data.items : null);
+    if (!items) throw new Error('Некорректный формат рейтинга');
+    list.innerHTML=items.slice(0,100).length
+      ? items.slice(0,100).map((p,i)=>{
+          const name=escapeHtml(p && p.name != null ? p.name : 'Игрок');
+          const score=Number(p && p.score);
+          return `<div class="leader-row"><span>${i+1}. ${name}</span><strong>${Number.isFinite(score) ? score.toLocaleString() : '—'}</strong></div>`;
+        }).join('')
+      : '<div class="small-note">Пока нет результатов. Стань первым!</div>';
+  } catch(e) {
+    console.warn('Leaderboard load failed:',e);
+    if (list && list.isConnected) list.textContent='Не удалось загрузить рейтинг. Попробуй позже.';
+  }
 }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 async function submitScore() {
@@ -1250,7 +1345,7 @@ document.addEventListener('pointerdown', () => { resumeAudio(); }, { capture: tr
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && state.soundEnabled) resumeAudio();
 });
-bootAuth().finally(homeMenu);
+bootAuth().finally(showHowToPlay);
 </script>
 </body>
 </html>

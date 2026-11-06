@@ -731,7 +731,7 @@ const API_BASE = window.ELVARQ_API_URL || 'https://YOUR-BACKEND-DOMAIN';
 let elvarqUser = null;
 let elvarqRoom = null;
 let elvarqMode = 'global';
-let elvarqDifficulty = 'extreme';
+let elvarqDifficulty = 'normal';
 let elvarqWs = null;
 
 async function api(path, options={}) {
@@ -1261,9 +1261,9 @@ function handleGameOver() {
   setTimeout(() => {
     showOverlay(
       '💀 GAME OVER',
-      `Раунд: <span style="color:#FFD700">${state.round}/20</span><br>
+      `Раунд: <span style="color:#FFD700">${state.round}/35</span><br>
        Счёт: <span style="color:#4DD9AC">${state.score}</span><br>
-       Режим: <span style="color:#FF6600">${state.extremeMode ? '🔥 EXTREME' : 'NORMAL'}</span>`,
+       Режим: <span style="color:#FF6600">${elvarqDifficulty.toUpperCase()}</span>`,
     );
   }, 400);
 }
@@ -1294,7 +1294,7 @@ function handleWin() {
       '🏆 ПОБЕДА!',
       `Все 35 уровней пройдены!<br>
        Счёт: <span style="color:#FFD700">${state.score}</span><br>
-       Режим: <span style="color:#FF6600">${state.extremeMode ? '🔥 EXTREME' : 'NORMAL'}</span><br>
+       Режим: <span style="color:#FF6600">${elvarqDifficulty.toUpperCase()}</span><br>
        <span style="color:#4DD9AC;font-size:8px">ELVARQ Company Production</span>`,
     );
   }, 1200);

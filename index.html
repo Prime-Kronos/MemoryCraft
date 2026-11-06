@@ -634,30 +634,50 @@ let audioCtx = null;
 function ensureAudio() {
   if (!audioCtx) {
     try {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    } catch(e) {}
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) audioCtx = new AudioContextClass();
+    } catch(e) {
+      console.warn('AudioContext unavailable:', e);
+    }
   }
   if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume().catch(()=>{});
+    audioCtx.resume().catch(e => console.warn('Audio resume failed:', e));
   }
+  return !!audioCtx;
 }
 
 function playTone(freq, type, duration, vol, delay=0) {
-  if (!state.soundEnabled) return;
-  ensureAudio();
-  if (!audioCtx) return;
-  try {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
-    gain.gain.setValueAtTime(vol, audioCtx.currentTime + delay);
-    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + delay + duration);
-    osc.start(audioCtx.currentTime + delay);
-    osc.stop(audioCtx.currentTime + delay + duration + 0.05);
-  } catch(e) {}
+  if (!state.soundEnabled || !ensureAudio()) return;
+  const ctx = audioCtx;
+
+  const schedule = () => {
+    if (!state.soundEnabled || ctx.state !== 'running') return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const startAt = ctx.currentTime + delay;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, startAt);
+      gain.gain.setValueAtTime(vol, startAt);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+      osc.start(startAt);
+      osc.stop(startAt + duration + 0.05);
+      osc.onended = () => {
+        osc.disconnect();
+        gain.disconnect();
+      };
+    } catch(e) {
+      console.warn('Sound playback failed:', e);
+    }
+  };
+
+  if (ctx.state === 'suspended') {
+    ctx.resume().then(schedule).catch(e => console.warn('Audio resume failed:', e));
+  } else {
+    schedule();
+  }
 }
 
 function playChord(freqs, type, duration, vol) {
@@ -909,7 +929,7 @@ function buildGrid(size) {
     el.style.width = cellSize + 'px';
     el.style.minWidth = '48px';
     el.innerHTML = `<svg><use href="#${b.icon}"/></svg>`;
-    el.addEventListener('pointerdown', onBlockPress);
+    el.addEventListener('click', onBlockPress);
     $grid.appendChild(el);
   });
 }
@@ -966,11 +986,14 @@ function beginInput() {
 
 function onBlockPress(e) {
   if (state.phase !== 'input') return;
-  ensureAudio();
   e.preventDefault();
 
   const cell = e.currentTarget;
-  const idx = parseInt(cell.dataset.index);
+  const idx = Number(cell.dataset.index);
+  if (!Number.isInteger(idx) || idx < 0 || idx >= state.gridBlocks.length) return;
+  if (state.playerInput.length >= state.sequence.length) return;
+
+  ensureAudio();
   SFX.click();
   gsap.to(cell, { scale: 0.9, duration: 0.06, yoyo: true, repeat: 1 });
 

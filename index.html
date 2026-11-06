@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ELVARQ MemoryCraft</title>
+<script src="config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+  :root {
+    --mc-grass:    #5D8A3C;
+    --mc-dirt:     #866044;
+    --mc-stone:    #7F7F7F;
+    --mc-wood:     #9B6B3B;
+    --mc-gold:     #FFD700;
+    --mc-diamond:  #4DD9AC;
+    --mc-redstone: #FF3333;
+    --mc-sky:      #72B8FF;
+    --mc-bg:       #1A1A2E;
+    --mc-panel:    #0D0D1A;
+    --mc-border:   #3D3D6B;
+    --mc-text:     #E0E0FF;
+    --mc-accent:   #FFD700;
+    --mc-green:    #44FF44;
+    --mc-red:      #FF4444;
+    --mc-extreme:  #FF6600;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Press Start 2P', monospace;
+    background: var(--mc-bg);
+    color: var(--mc-text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    overflow-x: hidden;
+    padding-bottom: 20px;
+    background-image:
+      radial-gradient(ellipse at top, #1e1e3f 0%, #0a0a16 60%),
+      url("data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='0' width='20' height='20' fill='%23ffffff03'/%3E%3Crect x='20' y='20' width='20' height='20' fill='%23ffffff03'/%3E%3C/svg%3E");
+  }
+
+  /* ── HEADER ── */
+  .header {
+    width: 100%;
+    text-align: center;
+    padding: 18px 10px 10px;
+    position: relative;
+  }
+  .game-title {
+    font-size: clamp(14px, 4vw, 22px);
+    color: var(--mc-gold);
+    text-shadow: 3px 3px 0 #7a5e00, 0 0 20px #ffd70088;
+    letter-spacing: 2px;
+    line-height: 1.4;
+  }
+  .game-subtitle {
+    font-size: clamp(6px, 1.8vw, 9px);
+    color: #8888aa;
+    margin-top: 6px;
+    letter-spacing: 1px;
+  }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    background: var(--mc-panel);
+    border: 2px solid var(--mc-border);
+    border-radius: 4px;
+    margin: 6px 10px;
+    width: calc(100% - 20px);
+    max-width: 640px;
+  }
+  .stat-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 70px;
+  }
+  .stat-label {
+    font-size: 6px;
+    color: #7777aa;
+    margin-bottom: 3px;
+  }
+  .stat-value {
+    font-size: clamp(10px, 3vw, 14px);
+    color: var(--mc-accent);
+  }
+  #timerDisplay { color: #44ff88; }
+  #timerDisplay.danger { color: var(--mc-red); animation: blink .4s infinite; }
+
+  @keyframes blink { 50% { opacity: .3; } }
+
+  .sound-btn {
+    background: var(--mc-panel);
+    border: 2px solid var(--mc-border);
+    border-radius: 4px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--mc-text);
+    margin-left: 6px;
+    transition: border-color .2s;
+    touch-action: manipulation;
+  }
+  .sound-btn:hover { border-color: var(--mc-accent); }
+
+  /* ── SEQUENCE DISPLAY ── */
+  .sequence-display {
+    text-align: center;
+    min-height: 36px;
+    padding: 6px;
+    font-size: clamp(7px, 2vw, 10px);
+    color: #aaaacc;
+  }
+  .seq-icon { display: inline-block; margin: 0 2px; }
+
+  /* ── GRID ── */
+  .grid-wrapper {
+    display: flex;
+    justify-content: center;
+    padding: 8px;
+    width: 100%;
+  }
+  #gameGrid {
+    display: grid;
+    gap: 6px;
+    max-width: min(96vw, 520px);
+    width: 100%;
+  }
+
+  /* ── BLOCKS ── */
+  .block {
+    aspect-ratio: 1;
+    border-radius: 3px;
+    cursor: pointer;
+    position: relative;
+    border: 3px solid transparent;
+    overflow: hidden;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: border-color .15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .block svg { width: 72%; height: 72%; pointer-events: none; }
+
+  .block.active {
+    border-color: #ffffff88 !important;
+    filter: brightness(1.6) drop-shadow(0 0 10px #ffffff99);
+  }
+  .block.correct {
+    border-color: var(--mc-green) !important;
+    filter: brightness(1.4) drop-shadow(0 0 8px var(--mc-green));
+  }
+  .block.wrong {
+    border-color: var(--mc-red) !important;
+    filter: brightness(1.4) drop-shadow(0 0 8px var(--mc-red));
+  }
+  .block.disabled { cursor: default; pointer-events: none; }
+
+  /* ── PROGRESS BAR ── */
+  .progress-wrap {
+    width: calc(100% - 20px);
+    max-width: 640px;
+    background: #111122;
+    border: 2px solid var(--mc-border);
+    border-radius: 4px;
+    height: 12px;
+    margin: 4px 10px;
+    overflow: hidden;
+  }
+  #progressBar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--mc-grass), var(--mc-diamond));
+    width: 0%;
+    transition: width .4s ease;
+    border-radius: 2px;
+  }
+
+  /* ── MESSAGE ── */
+  #message {
+    font-size: clamp(8px, 2.5vw, 12px);
+    text-align: center;
+    min-height: 24px;
+    padding: 4px 10px;
+    color: var(--mc-diamond);
+    text-shadow: 0 0 10px currentColor;
+  }
+
+  /* ── BUTTONS ── */
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 8px;
+  }
+  .mc-btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(7px, 2vw, 10px);
+    padding: 10px 18px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    position: relative;
+    transition: transform .1s, filter .1s;
+    touch-action: manipulation;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .mc-btn::after {
+    content: '';
+    position: absolute;
+    bottom: -4px; left: 4px; right: -4px;
+    height: 100%;
+    border-radius: 3px;
+    z-index: -1;
+    filter: brightness(.5);
+  }
+  .mc-btn:active { transform: translate(2px, 2px); }
+
+  .btn-start { background: var(--mc-grass); color: #fff; }
+  .btn-start::after { background: var(--mc-grass); }
+  .btn-extreme { background: var(--mc-extreme); color: #fff; }
+  .btn-extreme::after { background: var(--mc-extreme); }
+  .btn-restart { background: var(--mc-dirt); color: #fff; }
+  .btn-restart::after { background: var(--mc-dirt); }
+
+  /* ── OVERLAY ── */
+  #overlay {
+    position: fixed; inset: 0;
+    background: #000000cc;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .overlay-box {
+    background: var(--mc-panel);
+    border: 3px solid var(--mc-gold);
+    border-radius: 6px;
+    padding: 28px 24px;
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 0 40px #ffd70044;
+  }
+  .overlay-title {
+    font-size: clamp(14px, 4vw, 20px);
+    color: var(--mc-gold);
+    text-shadow: 2px 2px 0 #7a5e00;
+    margin-bottom: 14px;
+    line-height: 1.4;
+  }
+  .overlay-score {
+    font-size: clamp(9px, 2.5vw, 12px);
+    color: var(--mc-diamond);
+    margin-bottom: 20px;
+    line-height: 2;
+  }
+  #overlay.hidden { display: none; }
+
+  /* ── ROUND BADGE ── */
+  .round-badge {
+    display: inline-block;
+    background: var(--mc-wood);
+    border: 2px solid var(--mc-gold);
+    border-radius: 3px;
+    padding: 3px 8px;
+    font-size: clamp(7px, 2vw, 9px);
+    color: var(--mc-gold);
+    margin: 2px;
+  }
+  .round-badge.extreme { background: var(--mc-extreme); border-color: #ffcc00; color: #fff; }
+
+  /* ── PARTICLES ── */
+  .particle {
+    position: fixed;
+    pointer-events: none;
+    z-index: 200;
+    border-radius: 2px;
+  }
+
+  /* ── RESPONSIVE GRID COLUMNS ── */
+  @media (max-width: 360px) {
+    .game-title { font-size: 12px; }
+  }
+
+  .menu-actions{display:grid;gap:10px;margin-top:18px}
+  .menu-btn{width:100%;padding:14px 10px;border:1px solid #45456d;border-radius:8px;background:#17172b;color:#eeeefe;font:700 12px Arial,sans-serif;cursor:pointer;letter-spacing:.4px}
+  .menu-btn.primary{background:linear-gradient(135deg,#28684f,#174331);border-color:#4dd9ac;color:#fff}
+  .menu-btn.gold{background:linear-gradient(135deg,#66521b,#40330f);border-color:#d6ad39;color:#fff}
+  .menu-input{width:100%;padding:13px;border-radius:8px;border:1px solid #55557a;background:#090918;color:white;font:700 16px Arial,sans-serif;text-align:center;letter-spacing:4px;margin-top:8px}
+  .small-note{color:#9999b7;font:12px Arial,sans-serif;line-height:1.5;margin-top:12px}
+  .leader-list{max-height:48vh;overflow:auto;text-align:left;font:13px Arial,sans-serif;margin:12px 0}
+  .leader-row{display:flex;justify-content:space-between;gap:12px;padding:10px 7px;border-bottom:1px solid #30304b}
+  .leader-row strong{color:#ffd700}
+  .room-code{font:900 30px Arial,sans-serif;letter-spacing:6px;color:#4dd9ac;margin:18px 0}
+  .mode-choice{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px}
+  .menu-btn:disabled{opacity:.5}
+
+</style>
+</head>
+<body>
+
+<!-- SVG DEFS (Minecraft-style block icons) -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- GRASS BLOCK -->
+    <symbol id="icon-grass" viewBox="0 0 32 32">
+      <rect x="2" y="12" width="28" height="18" fill="#866044"/>
+      <rect x="2" y="12" width="28" height="6" fill="#5D8A3C"/>
+      <rect x="2" y="12" width="28" height="2" fill="#6ea844"/>
+      <rect x="4" y="14" width="4" height="3" fill="#76bb4b" opacity=".6"/>
+      <rect x="14" y="13" width="3" height="2" fill="#76bb4b" opacity=".5"/>
+      <rect x="2" y="18" width="28" height="12" fill="#9B6B3B" opacity=".4"/>
+      <rect x="2" y="12" width="1" height="18" fill="#ffffff22"/>
+      <rect x="2" y="28" width="28" height="2" fill="#00000033"/>
+    </symbol>
+    <!-- DIAMOND ORE -->
+    <symbol id="icon-diamond" viewBox="0 0 32 32">
+      <rect x="2" y="2" width="28" height="28" fill="#7F7F7F"/>
+      <rect x="2" y="2" width="28" height="4" fill="#999"/>
+      <rect x="2" y="2" width="4" height="28" fill="#aaa"/>
+      <rect x="2" y="26" width="28" height="4" fill="#555"/>
+      <rect x="2" y="6" width="28" height="2" fill="#6a6a6a" opacity=".5"/>
+      <!-- diamonds -->
+      <rect x="6" y="8" width="6" height="6" fill="#4DD9AC"/>
+      <rect x="7" y="9" width="4" height="4" fill="#7FECD4"/>
+      <rect x="8" y="10" width="2" height="2" fill="#B2F5E6"/>
+      <rect x="20" y="18" width="6" height="6" fill="#4DD9AC"/>
+      <rect x="21" y="19" width="4" height="4" fill="#7FECD4"/>
+      <rect x="22" y="20" width="2" height="2" fill="#B2F5E6"/>
+      <rect x="14" y="12" width="4" height="4" fill="#4DD9AC" opacity=".7"/>
+    </symbol>
+    <!-- GOLD ORE -->
+    <symbol id="icon-gold" viewBox="0 0 32 32">
+      <rect x="2" y="2" width="28" height="28" fill="#7F7F7F"/>
+      <rect x="2" y="2" width="28" height="4" fill="#999"/>
+      <rect x="2" y="2" width="4" height="28" fill="#aaa"/>
+      <rect x="2" y="26" width="28" height="4" fill="#555"/>
+      <rect x="7" y="9" width="7" height="7" fill="#FFD700"/>
+      <rect x="8" y="10" width="5" height="5" fill="#FFE966"/>
+      <rect x="9" y="11" width="2" height="2" fill="#fff8aa"/>
+      <rect x="18" y="17" width="7" height="7" fill="#FFD700"/>
+      <rect x="19" y="18" width="5" height="5" fill="#FFE966"/>
+      <rect x="20" y="19" width="2" height="2" fill="#fff8aa"/>
+    </symbol>
+    <!-- REDSTONE ORE -->
+    <symbol id="icon-redstone" viewBox="0 0 32 32">
+      <rect x="2" y="2" width="28" height="28" fill="#7F7F7F"/>
+      <rect x="2" y="2" width="28" height="4" fill="#999"/>
+      <rect x="2" y="2" width="4" height="28" fill="#aaa"/>
+      <rect x="2" y="26" width="28" height="4" fill="#555"/>
+      <rect x="6" y="10" width="5" height="5" fill="#FF3333"/>
+      <rect x="7" y="11" width="3" height="3" fill="#FF7777"/>
+      <rect x="8" y="12" width="1" height="1" fill="#ffaaaa"/>
+      <rect x="14" y="8" width="4" height="4" fill="#FF3333" opacity=".8"/>
+      <rect x="21" y="16" width="5" height="5" fill="#FF3333"/>
+      <rect x="22" y="17" width="3" height="3" fill="#FF7777"/>
+      <rect x="10" y="18" width="3" height="3" fill="#FF3333" opacity=".6"/>
+    </symbol>
+    <!-- WOOD LOG -->
+    <symbol id="icon-wood" viewBox="0 0 32 32">
+      <rect x="2" y="2" width="28" height="28" fill="#9B6B3B"/>
+      <rect x="2" y="2" width="28" height="28" fill="url(#woodPattern)"/>
+      <rect x="2" y="2" width="28" height="4" fill="#b07c46"/>
+      <rect x="2" y="2" width="4" height="28" fill="#c08a52"/>
+      <rect x="2" y="26" width="28" height="4" fill="#7a5230"/>
+      <rect x="6" y="6" width="20" height="20" fill="none" rx="8"
+            stroke="#7a5230" stroke-width="2" opacity=".5"/>
+      <rect x="10" y="10" width="12" height="12" fill="none" rx="4"
+            stroke="#7a5230" stroke-width="2" opacity=".5"/>
+      <rect x="14" y="14" width="4" height="4" fill="#c08a52" opacity=".5"/>
+    </symbol>
+    <!-- LAPIS -->
+    <symbol id="icon-lapis" viewBox="0 0 32 32">
+      <rect x="2" y="2" width="28" height="28" fill="#7F7F7F"/>
+      <rect x="2" y="2" width="28" height="4" fill="#999"/>
+      <rect x="2" y="2" width="4" height="28" fill="#aaa"/>
+      <rect x="2" y="26" width="28" height="4" fill="#555"/>
+      <rect x="6" y="8" width="8" height="8" fill="#1E5FBB"/>
+      <rect x="7" y="9" width="6" height="6" fill="#2878DD"/>
+      <rect x="8" y="10" width="2" height="2" fill="#6aaaf0"/>
+      <rect x="18" y="8" width="6" height="6" fill="#1E5FBB"/>
+      <rect x="19" y="9" width="4" height="4" fill="#2878DD"/>
+      <rect x="8" y="20" width="6" height="6" fill="#1E5FBB" opacity=".8"/>
+      <rect x="20" y="18" width="4" height="4" fill="#2878DD" opacity=".7"/>
+    </symbol>
+    <!-- EMERALD ORE -->
+    <symbol id="icon-emerald" viewBox="0 0 32 32">
+      <rect x="2" y="2" width="28" height="28" fill="#7F7F7F"/>
+      <rect x="2" y="2" width="28" height="4" fill="#999"/>
+      <rect x="2" y="2" width="4" height="28" fill="#aaa"/>
+      <rect x="2" y="26" width="28" height="4" fill="#555"/>
+      <rect x="7" y="9" width="7" height="7" fill="#44FF44"/>
+      <rect x="8" y="10" width="5" height="5" fill="#88FF88"/>
+      <rect x="9" y="11" width="2" height="2" fill="#ccffcc"/>
+      <rect x="18" y="17" width="6" height="6" fill="#44FF44"/>
+      <rect x="19" y="18" width="4" height="4" fill="#88FF88"/>
+      <rect x="13" y="6" width="4" height="4" fill="#44FF44" opacity=".6"/>
+    </symbol>
+    <!-- TNT -->
+    <symbol id="icon-tnt" viewBox="0 0 32 32">
+      <rect x="2" y="2" width="28" height="28" fill="#CC3333"/>
+      <rect x="2" y="2" width="28" height="6" fill="#888"/>
+      <rect x="2" y="24" width="28" height="6" fill="#888"/>
+      <rect x="2" y="2" width="28" height="4" fill="#aaa"/>
+      <rect x="2" y="2" width="4" height="28" fill="#aaa" opacity=".3"/>
+      <!-- T N T lettering (pixel) -->
+      <rect x="5" y="11" width="2" height="8" fill="#fff"/>
+      <rect x="4" y="11" width="6" height="2" fill="#fff"/>
+      <rect x="13" y="11" width="2" height="8" fill="#fff"/>
+      <rect x="13" y="15" width="2" height="2" fill="#fff"/>
+      <rect x="11" y="11" width="6" height="2" fill="#fff"/>
+      <rect x="11" y="14" width="6" height="2" fill="#fff"/>
+      <rect x="11" y="17" width="6" height="2" fill="#fff"/>
+      <rect x="22" y="11" width="2" height="8" fill="#fff"/>
+      <rect x="21" y="11" width="6" height="2" fill="#fff"/>
+    </symbol>
+    <!-- OBSIDIAN -->
+    <symbol id="icon-obsidian" viewBox="0 0 32 32">
+      <rect x="2" y="2" width="28" height="28" fill="#1A0A2E"/>
+      <rect x="2" y="2" width="28" height="4" fill="#2a1a3e"/>
+      <rect x="2" y="2" width="4" height="28" fill="#2a1a3e"/>
+      <rect x="2" y="26" width="28" height="4" fill="#0a000e"/>
+      <rect x="6" y="8" width="4" height="4" fill="#3d2060" opacity=".8"/>
+      <rect x="14" y="14" width="6" height="4" fill="#3d2060" opacity=".6"/>
+      <rect x="20" y="6" width="6" height="6" fill="#4a2878" opacity=".7"/>
+      <rect x="8" y="20" width="4" height="6" fill="#3d2060" opacity=".5"/>
+      <rect x="7" y="9" width="2" height="2" fill="#8060b0" opacity=".5"/>
+      <rect x="21" y="7" width="2" height="2" fill="#8060b0" opacity=".5"/>
+    </symbol>
+    <!-- WATER/ICE -->
+    <symbol id="icon-water" viewBox="0 0 32 32">
+      <rect x="2" y="2" width="28" height="28" fill="#1E5AE8" opacity=".85"/>
+      <rect x="2" y="2" width="28" height="4" fill="#3a7af8"/>
+      <rect x="2" y="2" width="4" height="28" fill="#4a8af8" opacity=".6"/>
+      <rect x="2" y="26" width="28" height="4" fill="#0a3ab8"/>
+      <rect x="4" y="8" width="24" height="4" fill="#fff" opacity=".15" rx="2"/>
+      <rect x="4" y="18" width="24" height="4" fill="#fff" opacity=".1" rx="2"/>
+      <rect x="8" y="6" width="16" height="2" fill="#fff" opacity=".25"/>
+    </symbol>
+    <!-- NETHER RACK -->
+    <symbol id="icon-nether" viewBox="0 0 32 32">
+      <rect x="2" y="2" width="28" height="28" fill="#7a2010"/>
+      <rect x="2" y="2" width="28" height="4" fill="#8a3020"/>
+      <rect x="2" y="2" width="4" height="28" fill="#9a4030"/>
+      <rect x="2" y="26" width="28" height="4" fill="#5a1008"/>
+      <rect x="6" y="6" width="4" height="4" fill="#ff6633" opacity=".4"/>
+      <rect x="14" y="10" width="6" height="4" fill="#ff4422" opacity=".3"/>
+      <rect x="20" y="18" width="4" height="6" fill="#ff6633" opacity=".35"/>
+      <rect x="8" y="20" width="6" height="4" fill="#ff4422" opacity=".25"/>
+      <rect x="7" y="7" width="2" height="2" fill="#ff9966" opacity=".5"/>
+      <rect x="21" y="19" width="2" height="2" fill="#ff9966" opacity=".5"/>
+    </symbol>
+    <!-- COOKED FOOD / APPLE -->
+    <symbol id="icon-apple" viewBox="0 0 32 32">
+      <rect x="12" y="2" width="4" height="6" fill="#5D8A3C"/>
+      <rect x="14" y="2" width="2" height="4" fill="#3a6a1c"/>
+      <rect x="6" y="8" width="20" height="20" fill="#DD4444"/>
+      <rect x="6" y="8" width="20" height="4" fill="#EE6666"/>
+      <rect x="6" y="8" width="4" height="20" fill="#EE6666" opacity=".5"/>
+      <rect x="6" y="24" width="20" height="4" fill="#AA2222"/>
+      <rect x="8" y="12" width="6" height="4" fill="#fff" opacity=".2"/>
+      <rect x="4" y="10" width="4" height="10" fill="#DD4444"/>
+      <rect x="24" y="10" width="4" height="10" fill="#DD4444"/>
+    </symbol>
+    <!-- ENDSTONE -->
+    <symbol id="icon-end" viewBox="0 0 32 32">
+      <rect x="2" y="2" width="28" height="28" fill="#D4CC88"/>
+      <rect x="2" y="2" width="28" height="4" fill="#E4DC98"/>
+      <rect x="2" y="2" width="4" height="28" fill="#E8E0A0"/>
+      <rect x="2" y="26" width="28" height="4" fill="#B4AC70"/>
+      <rect x="6" y="8" width="4" height="4" fill="#C4BC78" opacity=".8"/>
+      <rect x="14" y="6" width="6" height="4" fill="#B8B068" opacity=".7"/>
+      <rect x="20" y="14" width="6" height="6" fill="#C4BC78" opacity=".6"/>
+      <rect x="8" y="18" width="4" height="6" fill="#B8B068" opacity=".7"/>
+      <rect x="7" y="9" width="2" height="2" fill="#fff" opacity=".3"/>
+    </symbol>
+    <!-- CREATIVE EGG (bonus) -->
+    <symbol id="icon-egg" viewBox="0 0 32 32">
+      <rect x="10" y="4" width="12" height="24" fill="#fffde0" rx="6"/>
+      <rect x="8" y="10" width="16" height="12" fill="#fffde0"/>
+      <rect x="10" y="4" width="12" height="4" fill="#fff"/>
+      <rect x="10" y="4" width="4" height="24" fill="#fff" opacity=".3" rx="2"/>
+      <rect x="2" y="2" width="28" height="28" fill="none"/>
+      <rect x="13" y="14" width="6" height="4" fill="#f0d060" opacity=".6"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- MAIN LAYOUT -->
+<div class="header">
+  <div class="game-title">⛏ ELVARQ MemoryCraft</div>
+  <div class="game-subtitle">ELVARQ Company Production</div>
+</div>
+
+<div class="stats-bar">
+  <div class="stat-block">
+    <div class="stat-label">РАУНД</div>
+    <div class="stat-value" id="roundDisplay">1/20</div>
+  </div>
+  <div class="stat-block">
+    <div class="stat-label">СЧЁТ</div>
+    <div class="stat-value" id="scoreDisplay">0</div>
+  </div>
+  <div class="stat-block">
+    <div class="stat-label">ВРЕМЯ</div>
+    <div class="stat-value" id="timerDisplay">5.00</div>
+  </div>
+  <div class="stat-block">
+    <div class="stat-label">РЕЖИМ</div>
+    <div class="stat-value" id="modeDisplay">—</div>
+  </div>
+  <button class="sound-btn" id="soundToggle" title="Звук">🔊</button>
+</div>
+
+<div class="progress-wrap">
+  <div id="progressBar"></div>
+</div>
+
+<div class="sequence-display" id="seqDisplay"></div>
+<div id="message">Добро пожаловать в ELVARQ MemoryCraft!</div>
+
+<div class="grid-wrapper">
+  <div id="gameGrid"></div>
+</div>
+
+<div class="btn-row" id="btnRow">
+  <button class="mc-btn btn-start" id="btnStart">▶ НАЧАТЬ</button>
+  <button class="mc-btn btn-extreme" id="btnExtreme">🔥 EXTREME</button>
+</div>
+
+<!-- ELVARQ MINI APP HOME -->
+<div id="overlay">
+  <div class="overlay-box">
+    <div class="overlay-title" id="overlayTitle">⛏ ELVARQ MEMORYCRAFT</div>
+    <div class="overlay-score" id="overlayScore">Запоминай блоки. Стань легендой.</div>
+    <div id="homeMenu" class="menu-actions">
+      <button class="menu-btn primary" id="globalMode">🌍 GLOBAL · EXTREME</button>
+      <button class="menu-btn" id="friendsMode">👥 FRIENDS</button>
+      <button class="menu-btn gold" id="leaderboardMode">🏆 GLOBAL TOP 100</button>
+      <div class="small-note">ELVARQ MEMORYCRAFT · TELEGRAM MINI APP</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   ELVARQ MemoryCraft  v2.0
+   Full game logic + Audio + 20 Rounds + Timer
+═══════════════════════════════════════════ */
+
+// ── BLOCK DEFINITIONS ──────────────────────
+const BLOCKS = [
+  { id:'grass',    bg:'#5D8A3C', border:'#3d6020', icon:'icon-grass'   },
+  { id:'diamond',  bg:'#2a5555', border:'#4DD9AC', icon:'icon-diamond' },
+  { id:'gold',     bg:'#5a4a00', border:'#FFD700', icon:'icon-gold'    },
+  { id:'redstone', bg:'#5a1010', border:'#FF3333', icon:'icon-redstone'},
+  { id:'wood',     bg:'#5a3010', border:'#9B6B3B', icon:'icon-wood'    },
+  { id:'lapis',    bg:'#102050', border:'#2878DD', icon:'icon-lapis'   },
+  { id:'emerald',  bg:'#0a3010', border:'#44FF44', icon:'icon-emerald' },
+  { id:'tnt',      bg:'#5a1010', border:'#FF6666', icon:'icon-tnt'     },
+  { id:'obsidian', bg:'#100820', border:'#4a2878', icon:'icon-obsidian'},
+  { id:'water',    bg:'#102060', border:'#3a7af8', icon:'icon-water'   },
+  { id:'nether',   bg:'#3a0a08', border:'#cc3312', icon:'icon-nether'  },
+  { id:'apple',    bg:'#5a1010', border:'#DD4444', icon:'icon-apple'   },
+  { id:'end',      bg:'#4a4820', border:'#D4CC88', icon:'icon-end'     },
+];
+
+// ── ROUND CONFIG ──────────────────────────
+// { gridSize, seqLen, showTime, isExtreme }
+function getRoundConfig(round) {
+  const configs = [
+    { gridSize:2, seqLen:2, showTime:900,  isExtreme:false }, // 1
+    { gridSize:2, seqLen:3, showTime:800,  isExtreme:false }, // 2
+    { gridSize:3, seqLen:3, showTime:800,  isExtreme:false }, // 3
+    { gridSize:3, seqLen:4, showTime:750,  isExtreme:false }, // 4
+    { gridSize:3, seqLen:5, showTime:700,  isExtreme:false }, // 5
+    { gridSize:3, seqLen:5, showTime:650,  isExtreme:false }, // 6
+    { gridSize:4, seqLen:5, showTime:600,  isExtreme:false }, // 7
+    { gridSize:4, seqLen:6, showTime:600,  isExtreme:false }, // 8
+    { gridSize:4, seqLen:7, showTime:550,  isExtreme:false }, // 9
+    { gridSize:4, seqLen:7, showTime:500,  isExtreme:false }, // 10
+    { gridSize:4, seqLen:8, showTime:500,  isExtreme:true  }, // 11 EXTREME
+    { gridSize:4, seqLen:8, showTime:450,  isExtreme:true  }, // 12
+    { gridSize:4, seqLen:9, showTime:450,  isExtreme:true  }, // 13
+    { gridSize:4, seqLen:9, showTime:400,  isExtreme:true  }, // 14
+    { gridSize:5, seqLen:9, showTime:400,  isExtreme:true  }, // 15
+    { gridSize:5, seqLen:10,showTime:380,  isExtreme:true  }, // 16
+    { gridSize:5, seqLen:11,showTime:360,  isExtreme:true  }, // 17
+    { gridSize:5, seqLen:12,showTime:350,  isExtreme:true  }, // 18
+    { gridSize:5, seqLen:13,showTime:330,  isExtreme:true  }, // 19
+    { gridSize:5, seqLen:15,showTime:300,  isExtreme:true  }, // 20
+  ];
+  return configs[Math.min(round - 1, 19)];
+}
+
+// ── STATE ─────────────────────────────────
+let state = {
+  round: 1,
+  score: 0,
+  sequence: [],
+  playerInput: [],
+  phase: 'idle',   // idle | showing | input | gameover | win
+  extremeMode: false,
+  gridSize: 2,
+  gridBlocks: [],
+  timerInterval: null,
+  timerMs: 5000,
+  soundEnabled: true,
+};
+
+// ── AUDIO ─────────────────────────────────
+let audioCtx = null;
+
+function ensureAudio() {
+  if (!audioCtx) {
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch(e) {}
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(()=>{});
+  }
+}
+
+function playTone(freq, type, duration, vol, delay=0) {
+  if (!state.soundEnabled) return;
+  ensureAudio();
+  if (!audioCtx) return;
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime + delay);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + delay + duration);
+    osc.start(audioCtx.currentTime + delay);
+    osc.stop(audioCtx.currentTime + delay + duration + 0.05);
+  } catch(e) {}
+}
+
+function playChord(freqs, type, duration, vol) {
+  freqs.forEach(f => playTone(f, type, duration, vol/freqs.length));
+}
+
+const SFX = {
+  show:    () => playTone(440 + Math.random()*220, 'sine', 0.12, 0.08),
+  click:   () => playTone(330, 'square', 0.07, 0.07),
+  correct: () => { playTone(523, 'sine', 0.1, 0.09); playTone(659, 'sine', 0.1, 0.07, 0.08); },
+  wrong:   () => { playTone(180, 'sawtooth', 0.25, 0.09); playTone(140, 'sawtooth', 0.25, 0.07, 0.1); },
+  round:   () => { [523,659,784].forEach((f,i) => playTone(f,'sine',0.15,0.07,i*0.09)); },
+  win:     () => { [523,659,784,1047].forEach((f,i) => playTone(f,'sine',0.2,0.07,i*0.1)); },
+  lose:    () => { [220,196,174].forEach((f,i) => playTone(f,'sawtooth',0.2,0.07,i*0.12)); },
+  tick:    () => playTone(880, 'sine', 0.04, 0.04),
+};
+
+// ── DOM ───────────────────────────────────
+const $round   = document.getElementById('roundDisplay');
+const $score   = document.getElementById('scoreDisplay');
+const $timer   = document.getElementById('timerDisplay');
+const $mode    = document.getElementById('modeDisplay');
+const $seqDisp = document.getElementById('seqDisplay');
+const $msg     = document.getElementById('message');
+const $grid    = document.getElementById('gameGrid');
+const $prog    = document.getElementById('progressBar');
+const $overlay = document.getElementById('overlay');
+const $btnRow  = document.getElementById('btnRow');
+const $soundBtn= document.getElementById('soundToggle');
+
+
+const API_BASE = window.ELVARQ_API_URL || 'https://YOUR-BACKEND-DOMAIN';
+let elvarqUser = null;
+let elvarqRoom = null;
+let elvarqMode = 'global';
+let elvarqDifficulty = 'extreme';
+let elvarqWs = null;
+
+async function api(path, options={}) {
+  const headers = Object.assign({'Content-Type':'application/json'}, options.headers || {});
+  if (elvarqUser && elvarqUser.token) headers.Authorization = 'Bearer ' + elvarqUser.token;
+  const response = await fetch(API_BASE + path, Object.assign({}, options, {headers}));
+  const data = await response.json().catch(()=>({detail:'Server response error'}));
+  if (!response.ok) throw new Error(data.detail || 'Request failed');
+  return data;
+}
+function tgUser() {
+  const u = window.Telegram && Telegram.WebApp ? Telegram.WebApp.initDataUnsafe?.user : null;
+  return u || {id:0, first_name:'Guest', username:'guest'};
+}
+async function bootAuth() {
+  try {
+    if (window.Telegram?.WebApp) {
+      Telegram.WebApp.ready(); Telegram.WebApp.expand();
+      Telegram.WebApp.setHeaderColor('#101426'); Telegram.WebApp.setBackgroundColor('#0a0a16');
+    }
+    const initData = window.Telegram?.WebApp?.initData || '';
+    if (initData && API_BASE.indexOf('YOUR-BACKEND') === -1) {
+      elvarqUser = await api('/api/auth/telegram', {method:'POST', body:JSON.stringify({init_data:initData})});
+    }
+  } catch(e) { console.warn('ELVARQ auth:', e.message); }
+}
+function menu(title, subtitle, html) {
+  document.getElementById('overlayTitle').textContent = title;
+  document.getElementById('overlayScore').textContent = subtitle;
+  const home = document.getElementById('homeMenu');
+  home.style.display = 'grid'; home.innerHTML = html;
+  $overlay.classList.remove('hidden');
+}
+function homeMenu() {
+  elvarqMode='global'; elvarqRoom=null;
+  menu('⛏ ELVARQ MEMORYCRAFT','Запоминай блоки. Стань легендой.',`
+    <button class="menu-btn primary" id="globalMode">🌍 GLOBAL · EXTREME</button>
+    <button class="menu-btn" id="friendsMode">👥 FRIENDS</button>
+    <button class="menu-btn gold" id="leaderboardMode">🏆 GLOBAL TOP 100</button>
+    <div class="small-note">Официальная соревновательная игра ELVARQ</div>`);
+  document.getElementById('globalMode').onclick=()=>{elvarqMode='global';elvarqDifficulty='extreme';hideOverlay();startGame(true);};
+  document.getElementById('friendsMode').onclick=friendsMenu;
+  document.getElementById('leaderboardMode').onclick=showGlobalLeaderboard;
+}
+function friendsMenu() {
+  menu('👥 FRIENDS','Играй вместе с друзьями',`
+    <button class="menu-btn primary" id="createRoom">＋ СОЗДАТЬ КОМНАТУ</button>
+    <input class="menu-input" id="roomInput" maxlength="6" placeholder="КОД КОМНАТЫ">
+    <button class="menu-btn" id="joinRoom">ПРИСОЕДИНИТЬСЯ</button>
+    <button class="menu-btn" id="backHome">← НАЗАД</button>`);
+  document.getElementById('backHome').onclick=homeMenu;
+  document.getElementById('createRoom').onclick=createRoom;
+  document.getElementById('joinRoom').onclick=()=>joinRoom((document.getElementById('roomInput').value||'').trim().toUpperCase());
+}
+async function createRoom() {
+  try {
+    const result=await api('/api/rooms',{method:'POST',body:JSON.stringify({difficulty:'normal'})});
+    elvarqRoom=result.code;
+    roomLobby(result);
+  } catch(e) { alert('Не удалось создать комнату: '+e.message); }
+}
+async function joinRoom(code) {
+  if(!/^[A-Z0-9]{6}$/.test(code)){alert('Введи корректный код из 6 символов.');return;}
+  try { const result=await api('/api/rooms/'+code+'/join',{method:'POST',body:'{}'}); elvarqRoom=code; roomLobby(result); }
+  catch(e){alert('Не удалось войти: '+e.message);}
+}
+function roomLobby(room) {
+  menu('КОМНАТА '+room.code,'Приглашай друзей по коду',`
+    <div class="room-code">${room.code}</div>
+    <button class="menu-btn primary" id="copyCode">КОПИРОВАТЬ КОД</button>
+    <div class="mode-choice">
+      <button class="menu-btn" data-diff="normal">🟢 NORMAL</button>
+      <button class="menu-btn" data-diff="medium">🟡 MEDIUM</button>
+      <button class="menu-btn" data-diff="extreme">🔴 EXTREME</button>
+    </div>
+    <button class="menu-btn primary" id="startFriends">▶ НАЧАТЬ</button>
+    <button class="menu-btn" id="backFriends">← НАЗАД</button>
+    <div class="small-note" id="roomMembers">Участники: ${room.members ?? 1}</div>`);
+  document.querySelectorAll('[data-diff]').forEach(b=>b.onclick=()=>{
+    elvarqDifficulty=b.dataset.diff;
+    document.querySelectorAll('[data-diff]').forEach(x=>x.style.outline='none');
+    b.style.outline='2px solid #4dd9ac';
+  });
+  document.getElementById('copyCode').onclick=async()=>{
+    try{await navigator.clipboard.writeText(room.code);document.getElementById('copyCode').textContent='СКОПИРОВАНО ✓';}
+    catch(e){document.getElementById('copyCode').textContent=room.code;}
+  };
+  document.getElementById('startFriends').onclick=async()=>{
+    try{await api('/api/rooms/'+room.code+'/start',{method:'POST',body:JSON.stringify({difficulty:elvarqDifficulty})});}
+    catch(e){console.warn(e.message);}
+    elvarqMode='friends'; hideOverlay(); startGame(elvarqDifficulty==='extreme');
+  };
+  document.getElementById('backFriends').onclick=friendsMenu;
+}
+async function showGlobalLeaderboard() {
+  menu('🏆 GLOBAL TOP 100','Лучшие игроки ELVARQ',`<div class="leader-list">Загрузка рейтинга...</div><button class="menu-btn" id="backHome">← НАЗАД</button>`);
+  document.getElementById('backHome').onclick=homeMenu;
+  try {
+    const data=await api('/api/leaderboard?limit=100');
+    const list=document.querySelector('.leader-list');
+    list.innerHTML=data.items.length?data.items.map((p,i)=>`<div class="leader-row"><span>${i+1}. ${escapeHtml(p.name)}</span><strong>${p.score}</strong></div>`).join(''):'<div class="small-note">Пока нет результатов. Стань первым!</div>';
+  } catch(e) { document.querySelector('.leader-list').textContent='Рейтинг загрузится после подключения сервера.'; }
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+async function submitScore() {
+  try {
+    await api('/api/scores',{method:'POST',body:JSON.stringify({
+      score:state.score,round:state.round,mode:elvarqMode,difficulty:elvarqDifficulty,room_code:elvarqRoom
+    })});
+  } catch(e){console.warn('Score not synced:',e.message);}
+}
+document.getElementById('btnStart').addEventListener('click',()=>{elvarqMode='global';startGame(true);});
+document.getElementById('btnExtreme').addEventListener('click',()=>{elvarqMode='global';startGame(true);});
+$soundBtn.addEventListener('click',toggleSound);
+
+
+function toggleSound() {
+  ensureAudio();
+  state.soundEnabled = !state.soundEnabled;
+  $soundBtn.textContent = state.soundEnabled ? '🔊' : '🔇';
+}
+
+function hideOverlay() { $overlay.classList.add('hidden'); }
+function showOverlay(title, scoreHtml, showBtns=true) {
+  document.getElementById('overlayTitle').textContent = title;
+  document.getElementById('overlayScore').innerHTML = scoreHtml;
+  const home = document.getElementById('homeMenu');
+  if (home) {
+    home.style.display = 'grid';
+    home.innerHTML = `<button class="menu-btn primary" id="playAgain">↻ ИГРАТЬ СНОВА</button><button class="menu-btn" id="goHome">⌂ ГЛАВНОЕ МЕНЮ</button>`;
+    document.getElementById('playAgain').onclick = () => { hideOverlay(); startGame(elvarqMode === 'global' || elvarqDifficulty === 'extreme'); };
+    document.getElementById('goHome').onclick = homeMenu;
+  }
+  $overlay.classList.remove('hidden');
+}
+
+// ── GAME INIT ────────────────────────────
+function startGame(extreme) {
+  ensureAudio();
+  state.round = 1;
+  state.score = 0;
+  state.extremeMode = extreme;
+  state.phase = 'idle';
+  hideOverlay();
+  $btnRow.style.display = 'none';
+  updateHUD();
+  startRound();
+}
+
+function updateHUD() {
+  $round.textContent = state.round + '/20';
+  $score.textContent = state.score;
+  $mode.textContent = elvarqMode === 'global' ? 'GLOBAL / EXTREME' : ('FRIENDS / ' + elvarqDifficulty.toUpperCase());
+  $prog.style.width = ((state.round - 1) / 20 * 100) + '%';
+}
+
+// ── ROUND ────────────────────────────────
+function startRound() {
+  const cfg = Object.assign({}, getRoundConfig(state.round));
+  if (elvarqMode === 'friends') {
+    if (elvarqDifficulty === 'normal') cfg.showTime = Math.round(cfg.showTime * 1.45);
+    if (elvarqDifficulty === 'medium') cfg.showTime = Math.round(cfg.showTime * 1.15);
+    if (elvarqDifficulty === 'extreme') cfg.showTime = Math.round(cfg.showTime * 0.82);
+  }
+  state.gridSize = cfg.gridSize;
+  state.phase = 'showing';
+  clearTimer();
+  updateHUD();
+
+  if (cfg.isExtreme) {
+    $mode.textContent = '🔥 EXTREME';
+    $mode.style.color = '#FF6600';
+  } else {
+    $mode.style.color = '';
+  }
+
+  buildGrid(cfg.gridSize);
+  buildSequence(cfg.gridSize, cfg.seqLen);
+
+  $msg.textContent = `Раунд ${state.round} — запоминай последовательность!`;
+  $seqDisp.innerHTML = '';
+  $timer.classList.remove('danger');
+  $timer.textContent = '5.00';
+
+  disableGrid();
+  setTimeout(() => showSequence(cfg), 400);
+}
+
+function buildGrid(size) {
+  const count = size * size;
+  const pool = [...BLOCKS];
+  // shuffle pool
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  state.gridBlocks = pool.slice(0, count);
+
+  $grid.innerHTML = '';
+  $grid.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+
+  const maxW = Math.min(96 * window.innerWidth / 100, 520);
+  const cellSize = Math.floor((maxW - (size - 1) * 6 - 16) / size);
+
+  state.gridBlocks.forEach((b, i) => {
+    const el = document.createElement('div');
+    el.className = 'block';
+    el.dataset.index = i;
+    el.dataset.id = b.id;
+    el.style.background = b.bg;
+    el.style.borderColor = b.border;
+    el.style.width = cellSize + 'px';
+    el.style.minWidth = '48px';
+    el.innerHTML = `<svg><use href="#${b.icon}"/></svg>`;
+    el.addEventListener('pointerdown', onBlockPress);
+    $grid.appendChild(el);
+  });
+}
+
+function buildSequence(gridSize, seqLen) {
+  const count = gridSize * gridSize;
+  state.sequence = [];
+  for (let i = 0; i < seqLen; i++) {
+    state.sequence.push(Math.floor(Math.random() * count));
+  }
+  state.playerInput = [];
+}
+
+// ── SHOW SEQUENCE ────────────────────────
+function showSequence(cfg) {
+  const cells = $grid.querySelectorAll('.block');
+  let i = 0;
+  updateSeqDisplay();
+
+  function next() {
+    if (i >= state.sequence.length) {
+      setTimeout(beginInput, 400);
+      return;
+    }
+    const idx = state.sequence[i];
+    const cell = cells[idx];
+    SFX.show();
+    cell.classList.add('active');
+    gsap.to(cell, { scale: 1.08, duration: 0.08, yoyo: true, repeat: 1 });
+
+    setTimeout(() => {
+      cell.classList.remove('active');
+      i++;
+      setTimeout(next, cfg.showTime * 0.3);
+    }, cfg.showTime * 0.7);
+  }
+  next();
+}
+
+function updateSeqDisplay() {
+  const total = state.sequence.length;
+  const left = Math.max(0, total - state.playerInput.length);
+  $seqDisp.innerHTML = `<span style="color:#aaaacc;font-size:clamp(9px,2.4vw,12px);font-family:Arial,sans-serif;font-weight:800;letter-spacing:.5px">ОСТАЛОСЬ ЗАПОМНИТЬ: </span><strong style="color:#4DD9AC;font-size:clamp(15px,4vw,20px);font-family:Arial,sans-serif">${state.phase === 'input' ? left : total}</strong>`;
+}
+
+// ── INPUT PHASE ──────────────────────────
+function beginInput() {
+  state.phase = 'input';
+  state.playerInput = [];
+  enableGrid();
+  $msg.textContent = 'Нажимай в том же порядке!';
+  startTimer();
+}
+
+function onBlockPress(e) {
+  if (state.phase !== 'input') return;
+  ensureAudio();
+  e.preventDefault();
+
+  const cell = e.currentTarget;
+  const idx = parseInt(cell.dataset.index);
+  SFX.click();
+  gsap.to(cell, { scale: 0.9, duration: 0.06, yoyo: true, repeat: 1 });
+
+  state.playerInput.push(idx);
+  const step = state.playerInput.length - 1;
+  const expected = state.sequence[step];
+
+  if (idx === expected) {
+    // correct
+    cell.classList.add('correct');
+    setTimeout(() => cell.classList.remove('correct'), 300);
+    SFX.correct();
+    addTimerBonus(300); // +0.30 sec
+
+    if (state.playerInput.length === state.sequence.length) {
+      // round complete
+      clearTimer();
+      disableGrid();
+      state.phase = 'idle';
+      const pts = state.round * 10 * (state.extremeMode ? 2 : 1);
+      state.score += pts;
+      SFX.round();
+      $msg.textContent = `✓ Правильно! +${pts} очков`;
+      spawnParticles(cell, '#44FF44');
+
+      if (state.round >= 20) {
+        setTimeout(handleWin, 900);
+      } else {
+        state.round++;
+        setTimeout(startRound, 1200);
+      }
+    }
+  } else {
+    // wrong
+    cell.classList.add('wrong');
+    SFX.wrong();
+    spawnParticles(cell, '#FF4444');
+    setTimeout(() => cell.classList.remove('wrong'), 300);
+    clearTimer();
+    setTimeout(handleGameOver, 600);
+  }
+}
+
+function disableGrid() {
+  $grid.querySelectorAll('.block').forEach(c => c.classList.add('disabled'));
+}
+function enableGrid() {
+  $grid.querySelectorAll('.block').forEach(c => c.classList.remove('disabled'));
+}
+
+// ── TIMER ────────────────────────────────
+function startTimer() {
+  clearTimer();
+  state.timerMs = 5000;
+  updateTimerDisplay();
+  $timer.classList.remove('danger');
+
+  state.timerInterval = setInterval(() => {
+    state.timerMs -= 50;
+    if (state.timerMs <= 0) {
+      state.timerMs = 0;
+      updateTimerDisplay();
+      clearTimer();
+      SFX.wrong();
+      handleGameOver();
+      return;
+    }
+    if (state.timerMs <= 2000) {
+      $timer.classList.add('danger');
+      if (state.timerMs % 500 < 60) SFX.tick();
+    }
+    updateTimerDisplay();
+  }, 50);
+}
+
+function clearTimer() {
+  if (state.timerInterval) {
+    clearInterval(state.timerInterval);
+    state.timerInterval = null;
+  }
+}
+
+function addTimerBonus(ms) {
+  state.timerMs += ms;
+  updateTimerDisplay();
+  // flash green
+  const orig = $timer.style.color;
+  $timer.style.color = '#88ffaa';
+  $timer.style.textShadow = '0 0 12px #44ff88';
+  setTimeout(() => {
+    $timer.style.color = '';
+    $timer.style.textShadow = '';
+    if (state.timerMs > 2000) $timer.classList.remove('danger');
+  }, 250);
+}
+
+function updateTimerDisplay() {
+  const secs = (state.timerMs / 1000).toFixed(2);
+  $timer.textContent = secs;
+}
+
+// ── GAME OVER / WIN ──────────────────────
+function handleGameOver() {
+  if (state.phase === 'gameover') return;
+  state.phase = 'gameover';
+  clearTimer();
+  disableGrid();
+  SFX.lose();
+  submitScore();
+  $msg.textContent = '✗ Игра окончена!';
+  $timer.classList.remove('danger');
+
+  setTimeout(() => {
+    showOverlay(
+      '💀 GAME OVER',
+      `Раунд: <span style="color:#FFD700">${state.round}/20</span><br>
+       Счёт: <span style="color:#4DD9AC">${state.score}</span><br>
+       Режим: <span style="color:#FF6600">${state.extremeMode ? '🔥 EXTREME' : 'NORMAL'}</span>`,
+    );
+  }, 400);
+}
+
+function handleWin() {
+  state.phase = 'win';
+  clearTimer();
+  disableGrid();
+  SFX.win();
+  submitScore();
+  $msg.textContent = '🏆 ПОБЕДА!';
+  $prog.style.width = '100%';
+
+  // big particles
+  for (let i = 0; i < 6; i++) {
+    setTimeout(() => {
+      const fake = { getBoundingClientRect: () => ({
+        left: window.innerWidth * 0.3 + Math.random() * window.innerWidth * 0.4,
+        top:  window.innerHeight * 0.3 + Math.random() * window.innerHeight * 0.3,
+        width: 60, height: 60
+      }) };
+      spawnParticles(fake, ['#FFD700','#4DD9AC','#44FF44','#FF6600'][i % 4]);
+    }, i * 180);
+  }
+
+  setTimeout(() => {
+    showOverlay(
+      '🏆 ПОБЕДА!',
+      `Все 20 раундов пройдены!<br>
+       Счёт: <span style="color:#FFD700">${state.score}</span><br>
+       Режим: <span style="color:#FF6600">${state.extremeMode ? '🔥 EXTREME' : 'NORMAL'}</span><br>
+       <span style="color:#4DD9AC;font-size:8px">ELVARQ Company Production</span>`,
+    );
+  }, 1200);
+}
+
+// ── PARTICLES ────────────────────────────
+function spawnParticles(el, color) {
+  let rect;
+  try { rect = el.getBoundingClientRect(); }
+  catch(e) { return; }
+
+  for (let i = 0; i < 8; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = 4 + Math.random() * 6;
+    p.style.cssText = `
+      width:${size}px; height:${size}px;
+      background:${color};
+      left:${rect.left + rect.width/2}px;
+      top:${rect.top + rect.height/2}px;
+      opacity:1;
+    `;
+    document.body.appendChild(p);
+    const angle = (i / 8) * Math.PI * 2 + Math.random();
+    const dist  = 30 + Math.random() * 50;
+    gsap.to(p, {
+      x: Math.cos(angle) * dist,
+      y: Math.sin(angle) * dist,
+      opacity: 0,
+      duration: 0.5 + Math.random() * 0.3,
+      ease: 'power2.out',
+      onComplete: () => p.remove(),
+    });
+  }
+}
+
+// ── RESIZE ───────────────────────────────
+window.addEventListener('resize', () => {
+  if (state.phase !== 'idle' && state.gridSize) {
+    buildGrid(state.gridSize);
+    if (state.phase === 'showing' || state.phase === 'input') {
+      if (state.phase === 'input') enableGrid();
+      else disableGrid();
+    }
+  }
+});
+
+// ── PREVENT PULL-TO-REFRESH ──────────────
+document.addEventListener('touchmove', e => {
+  if (e.target.closest('#gameGrid')) e.preventDefault();
+}, { passive: false });
+bootAuth().finally(homeMenu);
+</script>
+</body>
+</html>

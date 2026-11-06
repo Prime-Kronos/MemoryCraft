@@ -884,8 +884,9 @@ function startRound() {
 
 function buildGrid(size) {
   const count = size * size;
-  const pool = [...BLOCKS];
-  // shuffle pool
+  // Fill every cell, including grids larger than the unique block list.
+  const pool = [];
+  while (pool.length < count) pool.push(...BLOCKS);
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -1157,12 +1158,9 @@ function spawnParticles(el, color) {
 
 // ── RESIZE ───────────────────────────────
 window.addEventListener('resize', () => {
-  if (state.phase !== 'idle' && state.gridSize) {
+  // Keep active-round DOM cells intact; showSequence() holds references to them.
+  if (state.phase === 'idle' && state.gridSize) {
     buildGrid(state.gridSize);
-    if (state.phase === 'showing' || state.phase === 'input') {
-      if (state.phase === 'input') enableGrid();
-      else disableGrid();
-    }
   }
 });
 

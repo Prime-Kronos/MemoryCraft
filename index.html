@@ -310,7 +310,8 @@
   .small-note{color:#9999b7;font:12px Arial,sans-serif;line-height:1.5;margin-top:12px}
   .leader-list{max-height:48vh;overflow:auto;text-align:left;font:13px Arial,sans-serif;margin:12px 0}
   .leader-row{display:flex;justify-content:space-between;gap:12px;padding:10px 7px;border-bottom:1px solid #30304b}
-  .leader-row strong{color:#ffd700}
+  .leader-row span{min-width:0;overflow-wrap:anywhere}
+  .leader-row strong{color:#ffd700;white-space:nowrap}
   .room-code{font:900 30px Arial,sans-serif;letter-spacing:6px;color:#4dd9ac;margin:18px 0}
   .mode-choice{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px}
   .menu-btn:disabled{opacity:.5}
@@ -765,7 +766,10 @@ function menu(title, subtitle, html) {
   $overlay.classList.remove('hidden');
 }
 let guideLanguage = 'ru';
-try { guideLanguage = localStorage.getItem('mc-guide-language') || 'ru'; } catch (_) {}
+try {
+  const savedGuideLanguage = localStorage.getItem('mc-guide-language');
+  if (['ru','uz','en'].includes(savedGuideLanguage)) guideLanguage = savedGuideLanguage;
+} catch (_) {}
 
 const GUIDE_TEXT = {
   ru: {

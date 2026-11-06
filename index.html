@@ -626,6 +626,7 @@ let state = {
   timerInterval: null,
   timerMs: 5000,
   soundEnabled: true,
+  roundToken: 0,
 };
 
 // ── AUDIO ─────────────────────────────────
@@ -852,6 +853,7 @@ function showOverlay(title, scoreHtml, showBtns=true) {
 
 // ── GAME INIT ────────────────────────────
 function startGame(extreme) {
+  state.roundToken++;
   ensureAudio();
   state.round = 1;
   state.score = 0;
@@ -872,6 +874,7 @@ function updateHUD() {
 
 // ── ROUND ────────────────────────────────
 function startRound() {
+  const token = ++state.roundToken;
   const cfg = Object.assign({}, getRoundConfig(state.round));
   if (elvarqMode === 'friends') {
     if (elvarqDifficulty === 'normal') cfg.showTime = Math.round(cfg.showTime * 1.45);
@@ -899,7 +902,9 @@ function startRound() {
   $timer.textContent = '5.00';
 
   disableGrid();
-  setTimeout(() => showSequence(cfg), 400);
+  setTimeout(() => {
+    if (token === state.roundToken && state.phase === 'showing') showSequence(cfg, token);
+  }, 400);
 }
 
 function buildGrid(size) {
@@ -943,24 +948,41 @@ function buildSequence(gridSize, seqLen) {
   state.playerInput = [];
 }
 
+// ── SAFE ANIMATION ────────────────────────
+function animateElement(element, options) {
+  if (window.gsap && typeof window.gsap.to === 'function') {
+    try { window.gsap.to(element, options); return; }
+    catch (error) { console.warn('Animation skipped:', error); }
+  }
+  if (typeof options.onComplete === 'function') setTimeout(options.onComplete, 0);
+}
+
 // ── SHOW SEQUENCE ────────────────────────
-function showSequence(cfg) {
+function showSequence(cfg, token) {
   const cells = $grid.querySelectorAll('.block');
   let i = 0;
   updateSeqDisplay();
 
   function next() {
+    if (token !== state.roundToken || state.phase !== 'showing') return;
     if (i >= state.sequence.length) {
-      setTimeout(beginInput, 400);
+      setTimeout(() => beginInput(token), 400);
       return;
     }
     const idx = state.sequence[i];
     const cell = cells[idx];
+    // Never let a missing cell or unavailable animation library stop the round.
+    if (!cell) {
+      i++;
+      setTimeout(next, 0);
+      return;
+    }
     SFX.show();
     cell.classList.add('active');
-    gsap.to(cell, { scale: 1.08, duration: 0.08, yoyo: true, repeat: 1 });
+    animateElement(cell, { scale: 1.08, duration: 0.08, yoyo: true, repeat: 1 });
 
     setTimeout(() => {
+      if (token !== state.roundToken || state.phase !== 'showing') return;
       cell.classList.remove('active');
       i++;
       setTimeout(next, cfg.showTime * 0.3);
@@ -976,7 +998,8 @@ function updateSeqDisplay() {
 }
 
 // ── INPUT PHASE ──────────────────────────
-function beginInput() {
+function beginInput(token) {
+  if (token !== state.roundToken || state.phase !== 'showing') return;
   state.phase = 'input';
   state.playerInput = [];
   enableGrid();
@@ -995,7 +1018,7 @@ function onBlockPress(e) {
 
   ensureAudio();
   SFX.click();
-  gsap.to(cell, { scale: 0.9, duration: 0.06, yoyo: true, repeat: 1 });
+  animateElement(cell, { scale: 0.9, duration: 0.06, yoyo: true, repeat: 1 });
 
   state.playerInput.push(idx);
   const step = state.playerInput.length - 1;
@@ -1020,10 +1043,16 @@ function onBlockPress(e) {
       spawnParticles(cell, '#44FF44');
 
       if (state.round >= 20) {
-        setTimeout(handleWin, 900);
+        const completedToken = state.roundToken;
+        setTimeout(() => {
+          if (completedToken === state.roundToken && state.phase === 'idle') handleWin();
+        }, 900);
       } else {
+        const completedToken = state.roundToken;
         state.round++;
-        setTimeout(startRound, 1200);
+        setTimeout(() => {
+          if (completedToken === state.roundToken && state.phase === 'idle') startRound();
+        }, 1200);
       }
     }
   } else {
@@ -1033,7 +1062,10 @@ function onBlockPress(e) {
     spawnParticles(cell, '#FF4444');
     setTimeout(() => cell.classList.remove('wrong'), 300);
     clearTimer();
-    setTimeout(handleGameOver, 600);
+    const failedToken = state.roundToken;
+    setTimeout(() => {
+      if (failedToken === state.roundToken && state.phase === 'input') handleGameOver();
+    }, 600);
   }
 }
 
@@ -1168,7 +1200,7 @@ function spawnParticles(el, color) {
     document.body.appendChild(p);
     const angle = (i / 8) * Math.PI * 2 + Math.random();
     const dist  = 30 + Math.random() * 50;
-    gsap.to(p, {
+    animateElement(p, {
       x: Math.cos(angle) * dist,
       y: Math.sin(angle) * dist,
       opacity: 0,
@@ -1176,6 +1208,7 @@ function spawnParticles(el, color) {
       ease: 'power2.out',
       onComplete: () => p.remove(),
     });
+    if (!window.gsap) setTimeout(() => p.remove(), 900);
   }
 }
 

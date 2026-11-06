@@ -4,7 +4,7 @@
 
 window.ELVARQ_CONFIG = {
     APP_NAME: "ELVARQ MemoryCraft",
-    VERSION: "1.0.0",
+    VERSION: "3.0.0",
     API_URL: "https://elvarq-memorycraft-api.onrender.com",
 
     BOT_USERNAME: "ECMemoryCraft_bot",
@@ -19,8 +19,8 @@ window.ELVARQ_CONFIG = {
         globalTop: 100,
         roomCodeLength: 6,
         maxPlayers: 20,
-        difficulties: ["normal", "medium", "extreme"],
-        globalDifficulty: "extreme"
+        difficulties: ["normal", "medium", "hardcore", "extreme"],
+        globalDifficulty: "normal"
     },
 
     FEATURES: {
